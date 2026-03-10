@@ -1,5 +1,5 @@
 /**
- * CruiseRadar Proxy — v0.1.5
+ * CruiseRadar Proxy — v0.1.7BF2
  * Railway WebSocket proxy for AISstream.io
  */
 
@@ -94,7 +94,7 @@ setInterval(pruneTrails, PRUNE_INTERVAL_MS);
 
 const httpServer = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end(`CruiseRadar Proxy v0.1.5 — ${shipCache.size} ships cached`);
+  res.end(`CruiseRadar Proxy v0.1.7BF2 — ${shipCache.size} ships cached`);
 });
 
 const wss = new WebSocket.Server({ server: httpServer });
@@ -130,6 +130,7 @@ function connectAIS() {
     aisWs.send(JSON.stringify({
       APIKey: AIS_API_KEY,
       BoundingBoxes: [[[-90, -180], [90, 180]]],
+      FiltersShipMMSI: [...CRUISE_MMSI].map(String),
       FilterMessageTypes: ["PositionReport", "ShipStaticData"],
     }));
   });
@@ -160,9 +161,7 @@ function handleAISMessage(msg) {
     if (lat === undefined || lon === undefined) return;
 
     const cached = shipCache.get(mmsi);
-    const cachedType = cached?.info?.shipType ?? 0;
-    const cachedIsPassenger = cachedType >= 60 && cachedType <= 69;
-    if (!CRUISE_MMSI.has(mmsi) && !cachedIsPassenger) return;
+    if (!CRUISE_MMSI.has(mmsi)) return;
 
     const info = {
       mmsi, name: meta.ShipName || cached?.info?.name || `Ship ${mmsi}`,
@@ -178,9 +177,8 @@ function handleAISMessage(msg) {
   } else if (type === "ShipStaticData") {
     const stat = msg.Message?.ShipStaticData;
     if (!stat) return;
+    if (!CRUISE_MMSI.has(mmsi)) return;
     const sType = stat.Type ?? 0;
-    const isP = sType >= 60 && sType <= 69;
-    if (!CRUISE_MMSI.has(mmsi) && !isP) return;
 
     const info = {
       mmsi, name: meta.ShipName || stat.Name || `Ship ${mmsi}`,
@@ -196,6 +194,6 @@ function handleAISMessage(msg) {
 }
 
 httpServer.listen(PORT, () => {
-  console.log(`[HTTP] CruiseRadar Proxy v0.1.5 listening on port ${PORT}`);
+  console.log(`[HTTP] CruiseRadar Proxy v0.1.7BF2 listening on port ${PORT}`);
   connectAIS();
 });
